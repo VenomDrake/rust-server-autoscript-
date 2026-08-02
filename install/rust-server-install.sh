@@ -40,8 +40,39 @@ runuser -u rustserver -- bash -c 'cd /home/rustserver && ./linuxgsm.sh rustserve
 runuser -u rustserver -- bash -c 'cd /home/rustserver && ./rustserver auto-install'
 rm -f /etc/sudoers.d/rustserver-linuxgsm
 trap - EXIT
+
+if [[ ! -x /home/rustserver/serverfiles/RustDedicated ]]; then
+  msg_error "Rust Dedicated Server was not installed correctly"
+  exit 1
+fi
 msg_ok "Installed LinuxGSM and Rust Dedicated Server"
 
+msg_info "Configuring Rust Dedicated Server"
+RCON_PASSWORD="$(uuidgen | tr -d '-')"
+SERVER_NAME="Rust Server - $(hostname)"
+RUST_CONFIG=/home/rustserver/lgsm/config-lgsm/rustserver/rustserver.cfg
+cat >> "$RUST_CONFIG" <<EOF
+
+# Provisioned automatically by the Proxmox VE installer.
+servername="$SERVER_NAME"
+serverpassword=""
+rconpassword="$RCON_PASSWORD"
+port="28015"
+queryport="28017"
+rconport="28016"
+appport="28082"
+maxplayers="50"
+serverlevel="Procedural Map"
+worldsize="3500"
+saveinterval="600"
+tickrate="30"
+public="1"
+EOF
+chown rustserver:rustserver "$RUST_CONFIG"
+chmod 0600 "$RUST_CONFIG"
+
+cat > /root/rustserver-credentials.txt <<EOF
+Rust Dedicated Server
 msg_info "Adding recommended scheduled tasks"
 cat > /etc/cron.d/rustserver <<'EOF'
 */5 * * * * rustserver /home/rustserver/rustserver monitor >/dev/null 2>&1
@@ -51,6 +82,13 @@ EOF
 chmod 0644 /etc/cron.d/rustserver
 systemctl enable --now cron
 msg_ok "Added recommended scheduled tasks"
+
+msg_info "Verifying Rust Dedicated Server"
+if ! runuser -u rustserver -- /home/rustserver/rustserver details; then
+  msg_error "LinuxGSM could not report the Rust server status"
+  exit 1
+fi
+msg_ok "Rust Dedicated Server is ready"
 
 motd_ssh
 customize
