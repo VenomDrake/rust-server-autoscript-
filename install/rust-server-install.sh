@@ -73,43 +73,6 @@ chmod 0600 "$RUST_CONFIG"
 
 cat > /root/rustserver-credentials.txt <<EOF
 Rust Dedicated Server
-=====================
-Server name: $SERVER_NAME
-Game address: $(hostname -I | awk '{print $1}'):28015
-RCON address: $(hostname -I | awk '{print $1}'):28016
-RCON password: $RCON_PASSWORD
-
-LinuxGSM user: rustserver (interactive password login is disabled)
-LinuxGSM command: runuser -u rustserver -- /home/rustserver/rustserver <command>
-EOF
-chmod 0600 /root/rustserver-credentials.txt
-msg_ok "Configured Rust Dedicated Server"
-
-msg_info "Enabling Rust Dedicated Server at boot"
-cat > /etc/systemd/system/rustserver.service <<'EOF'
-[Unit]
-Description=LinuxGSM Rust Dedicated Server
-Wants=network-online.target
-After=network-online.target
-
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-User=rustserver
-Group=rustserver
-WorkingDirectory=/home/rustserver
-ExecStart=/home/rustserver/rustserver start
-ExecStop=/home/rustserver/rustserver stop
-TimeoutStartSec=900
-TimeoutStopSec=120
-
-[Install]
-WantedBy=multi-user.target
-EOF
-systemctl daemon-reload
-systemctl enable --now rustserver.service
-msg_ok "Enabled and started Rust Dedicated Server"
-
 msg_info "Adding recommended scheduled tasks"
 cat > /etc/cron.d/rustserver <<'EOF'
 */5 * * * * rustserver /home/rustserver/rustserver monitor >/dev/null 2>&1
